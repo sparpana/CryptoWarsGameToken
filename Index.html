@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CryptoWarGameToken UI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      font-family: 'Roboto', Arial, sans-serif;
+      color: #f5f6fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    h1 {
+      font-family: 'Orbitron', Arial, sans-serif;
+      font-size: 2.5rem;
+      margin-top: 2rem;
+      letter-spacing: 2px;
+      color: #00fff1;
+      text-shadow: 0 2px 16px #00fff1aa;
+    }
+    .dashboard-card {
+      background: rgba(34, 40, 49, 0.95);
+      border-radius: 18px;
+      box-shadow: 0 8px 32px 0 #00000060;
+      padding: 2.5rem 2rem 2rem 2rem;
+      margin: 2rem 0 0 0;
+      min-width: 340px;
+      max-width: 95vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1.5px solid #00fff1;
+    }
+    .info-row {
+      margin: 1rem 0;
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+    }
+    .btn-group {
+      display: flex;
+      gap: 1.2rem;
+      margin: 1.5rem 0 0 0;
+    }
+    button {
+      background: linear-gradient(90deg, #00fff1 0%, #0077ff 100%);
+      color: #1a1a2e;
+      font-family: 'Orbitron', Arial, sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      padding: 0.8rem 1.8rem;
+      margin: 0.2rem 0;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #00fff199;
+      transition: background 0.2s, color 0.2s, transform 0.1s;
+    }
+    button:hover, button:focus {
+      background: linear-gradient(90deg, #0077ff 0%, #00fff1 100%);
+      color: #fff;
+      transform: translateY(-2px) scale(1.04);
+      outline: none;
+    }
+    #status-message {
+      margin-top: 1.2rem;
+      min-height: 1.5em;
+      color: #ffb347;
+      font-size: 1.05rem;
+      text-align: center;
+    }
+    @media (max-width: 500px) {
+      .dashboard-card { padding: 1.2rem 0.5rem; min-width: unset; }
+      h1 { font-size: 1.5rem; }
+      .btn-group { flex-direction: column; gap: 0.7rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>CryptoWarsGameToken Dashboard</h1>
+  <div class="dashboard-card">
+    <div class="info-row">
+      <button onclick="connectWallet()" id="connectBtn">Connect Wallet</button>
+    </div>
+    <div class="info-row" id="wallet">Wallet: Not connected</div>
+    <div class="info-row" id="balance">Balance: -- CWGT</div>
+    <div class="btn-group">
+      <button onclick="claimFaucet()">Claim Faucet</button>
+      <button onclick="claimAirdrop()">Claim Airdrop</button>
+    </div>
+    <div id="status-message"></div>
+  </div>
+
+  <script>
+    // TODO: Replace with your actual deployed contract address
+    const tokenAddress = "0xa5f87d33439deb87554228015c6b6c99740b8d50";
+    // ABI extracted from CryptoWarsGameToken.json
+    const tokenABI = [
+      {"inputs":[],"stateMutability":"nonpayable","type":"constructor"},
+      {"inputs":[],"name":"airdropAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"airdropClaimed","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"claimAirdrop","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[],"name":"claimFaucet","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[],"name":"faucetAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"faucetCooldown","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"getAllPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"lastFaucetClaim","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"experience","type":"uint256"},{"internalType":"uint256","name":"level","type":"uint256"}],"name":"updatePlayerStats","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"leaderboard","outputs":[{"internalType":"uint256","name":"experience","type":"uint256"},{"internalType":"uint256","name":"level","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"setAirdropAmount","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"cooldown","type":"uint256"}],"name":"setFaucetCooldown","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"setFaucetAmount","outputs":[],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+      {"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+      {"inputs":[],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"}
+    ];
+
+    let signer;
+    let contract;
+
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert("MetaMask not found");
+        return;
+      }
+
+      await ethereum.request({ method: "eth_requestAccounts" });
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+      const address = await signer.getAddress();
+      document.getElementById("wallet").innerText = "Wallet: " + address;
+
+      contract = new ethers.Contract(tokenAddress, tokenABI, signer);
+      updateBalance();
+    }
+
+    async function updateBalance() {
+      const address = await signer.getAddress();
+      const balance = await contract.balanceOf(address);
+      const formatted = ethers.utils.formatUnits(balance, 18);
+      document.getElementById("balance").innerText = "Balance: " + formatted + " CWGT";
+    }
+
+    async function claimFaucet() {
+      try {
+        const tx = await contract.claimFaucet();
+        await tx.wait();
+        alert("Faucet claimed!");
+        updateBalance();
+      } catch (err) {
+        alert("Error claiming faucet: " + err.message);
+      }
+    }
+
+    async function claimAirdrop() {
+      try {
+        const tx = await contract.claimAirdrop();
+        await tx.wait();
+        alert("Airdrop claimed!");
+        updateBalance();
+      } catch (err) {
+        alert("Error claiming airdrop: " + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
